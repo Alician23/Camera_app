@@ -41,6 +41,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+
         newPhotoPath = savedInstanceState?.getString(NEW_PHOTO_PATH_KEY)
         visibleImagePath = savedInstanceState?.getString((VISIBLE_IMAGE_PATH_KEY))
 
