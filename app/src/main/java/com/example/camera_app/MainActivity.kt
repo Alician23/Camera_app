@@ -23,16 +23,13 @@ private const val TAG = "MAIN_ACTIVITY"
 
 class MainActivity : AppCompatActivity() {
 
-//    private lateinit var imageButton: ImageButton
-    private  lateinit var imageButton: List<ImageButton>
-    private lateinit var mainView: View
 
-//    private var newPhotoPath: String? = null
-//    private  var visibleImagePath: String? = null
+    private lateinit var imageButtons: List<ImageButton>
+    private lateinit var mainView: View
 
     private var photoPaths: ArrayList<String?> = arrayListOf(null, null, null, null)
 
-    private var whichImageIndex : Int? = null
+    private var whichImageIndex: Int? = null
 
     private var currentPhotoPath: String? = null
 
@@ -44,11 +41,10 @@ class MainActivity : AppCompatActivity() {
     private val CURRENT_PHOTO_PATH_KEY = "current photo path key"
 
 
-
-
-    private val cameraActivityLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-        result -> handleImage(result)
-    }
+    private val cameraActivityLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            handleImage(result)
+        }
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -56,20 +52,20 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
 
-        whichImageIndex = savedInstanceState.getInt(IMAGE_INDEX_KEY)
+        whichImageIndex = savedInstanceState?.getInt(IMAGE_INDEX_KEY) ?: -1
         currentPhotoPath = savedInstanceState?.getString(CURRENT_PHOTO_PATH_KEY)
         photoPaths = savedInstanceState?.getStringArrayList(PHOTO_PATH_LIST_ARRAY_KEY)
             ?: arrayListOf(null, null, null, null)
 
         mainView = findViewById(R.id.content)
 
-        imageButton = listOf<ImageButton>(
+        imageButtons = listOf<ImageButton>(
             findViewById(R.id.imageButton),
             findViewById(R.id.imageButton1),
             findViewById(R.id.imageButton2),
             findViewById(R.id.imageButton3),
         )
-        for (imageButton in imageButton) {
+        for (imageButton in imageButtons) {
             imageButton.setOnClickListener { ib ->
                 takePictureFor(ib as ImageButton)
             }
@@ -78,45 +74,45 @@ class MainActivity : AppCompatActivity() {
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
-        outState.putStringArrayList(PHOTO_PATH_LIST_ARRAY_KEY,photoPaths)
-        outState.putString(CURRENT_PHOTO_PATH_KEY,currentPhotoPath)
-        whichImageIndex?.let { index -> outState.putInt(IMAGE_INDEX_KEY, index)}
+        outState.putStringArrayList(PHOTO_PATH_LIST_ARRAY_KEY, photoPaths)
+        outState.putString(CURRENT_PHOTO_PATH_KEY, currentPhotoPath)
+        whichImageIndex?.let { index -> outState.putInt(IMAGE_INDEX_KEY, index) }
 
     }
 
-    private fun takePictureFor( imageButton: ImageButton) {
+    private fun takePictureFor(imageButton: ImageButton) {
 
-        val index = imageButtons.indexOf(ImageButton)
+        val index = imageButtons.indexOf(imageButton)
         whichImageIndex = index
 
-       val takePictureIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+        val takePictureIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
 
-       val (photoFile, photoFilePath) = createImageFile()
+        val (photoFile, photoFilePath) = createImageFile()
 
         if (photoFile != null) {
             currentPhotoPath = photoFilePath
-           val photoUri = FileProvider.getUriForFile(
-               this,
-               "com.example.camera_app.fileprovider",
-               photoFile
-           )
-           takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoUri)
-           cameraActivityLauncher.launch(takePictureIntent)
+            val photoUri = FileProvider.getUriForFile(
+                this,
+                "com.example.camera_app.fileprovider",
+                photoFile
+            )
+            takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoUri)
+            cameraActivityLauncher.launch(takePictureIntent)
 
-       }
+        }
 
         startActivity(takePictureIntent)
     }
 
     private fun createImageFile(): Pair<File?, String?> {
-        try {
+        return try {
             val dateTime = SimpleDateFormat("yyyyMMdd_HHmmss").format(Date())
             val imageFileName = "COLLAGE_$dateTime"
             val storageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES)
             val file = File.createTempFile(imageFileName, ".jpg", storageDir)
             val filePath = file.absolutePath
             return file to filePath
-        }catch (ex: IOException) {
+        } catch (ex: IOException) {
             return null to null
         }
     }
@@ -126,41 +122,44 @@ class MainActivity : AppCompatActivity() {
         when (result.resultCode) {
             RESULT_OK -> {
                 Log.d(TAG, "Result ok, user took picture,image at $currentPhotoPath")
-                whichImageIndex?.let {index -> photoPaths[index] = currentPhotoPath}
+                whichImageIndex?.let { index -> photoPaths[index] = currentPhotoPath }
 
             }
+
             RESULT_CANCELED ->
                 Log.d(TAG, "Result cancelled, no picture taken")
-            }
         }
-
+    }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         Log.d(TAG, "on window focus changed $hasFocus visible image at $currentPhotoPath")
         if (hasFocus) {
-//            visibleImagePath?. let {imagePath ->
-//                loadImage(imageButton, imagePath)
 
+            imageButtons.zip(photoPaths) { imageButton, photoPath -> // Looping over both lists at once
+                photoPath?.let {
+                    loadImage(imageButton, photoPath) // Examining each image
+                }
             }
         }
     }
 
-    private fun loadImage(imageButton: ImageButton, imagePath: String) {
-         Picasso.get()
-             .load(File(imagePath))
-             .error(android.R.drawable.stat_notify_error)
-             .fit()
-             .centerCrop()
-             .into(imageButton, object: Callback {
-                 override fun onSuccess() {
-                     Log.d(TAG, "Loaded image $imagePath")
-                 }
 
-                 override fun onError(e: Exception?) {
-                     Log.e(TAG, "Error loading image $imagePath", e)
-                 }
-             })
+    private fun loadImage(imageButton: ImageButton, imagePath: String) {
+        Picasso.get()
+            .load(File(imagePath))
+            .error(android.R.drawable.stat_notify_error)
+            .fit()
+            .centerCrop()
+            .into(imageButton, object : Callback {
+                override fun onSuccess() {
+                    Log.d(TAG, "Loaded image $imagePath")
+                }
+
+                override fun onError(e: Exception?) {
+                    Log.e(TAG, "Error loading image $imagePath", e)
+                }
+            })
 
     }
 }
